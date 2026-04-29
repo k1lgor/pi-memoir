@@ -1,0 +1,20 @@
+{
+  "name": "pi-memoir",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Persistent project memory for pi — the LLM queries the memoire instead of reading all files, saving ~95%+ tokens.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "memory",
+    "mempalace",
+    "knowledge-graph",
+    "token-savings",
+    "project-memory"
+  ],
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
