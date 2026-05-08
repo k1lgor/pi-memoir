@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/k1lgor/pi-memoir.git"
+    "url": "git+https://github.com/k1lgor/pi-memoir.git"
   },
   "pi": {
     "extensions": [
