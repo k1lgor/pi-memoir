@@ -15,7 +15,10 @@
  *   /memo path
  */
 
-import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+} from "@mariozechner/pi-coding-agent";
 import { store } from "./storage";
 import { harvestProject } from "./harvester";
 
@@ -23,11 +26,15 @@ import { harvestProject } from "./harvester";
 
 export function registerCommand(pi: ExtensionAPI): void {
   pi.registerCommand("memo", {
-    description: "Pi-memoir: persistent project memory. Subcommands: store, search, list, delete, harvest, stats, path",
+    description:
+      "Pi-memoir: persistent project memory. Subcommands: store, search, list, delete, harvest, stats, path",
     handler: async (args: string, ctx: ExtensionCommandContext) => {
       const parts = args.trim().split(/\s+/);
       if (parts.length === 0 || parts[0] === "") {
-        ctx.ui.notify("Usage: /memo <store|search|list|delete|harvest|stats|path>", "info");
+        ctx.ui.notify(
+          "Usage: /memo <store|search|list|delete|harvest|stats|path>",
+          "info",
+        );
         return;
       }
 
@@ -56,7 +63,10 @@ export function registerCommand(pi: ExtensionAPI): void {
           await handlePath(ctx);
           break;
         default:
-          ctx.ui.notify(`Unknown subcommand: ${subcommand}. Use: store, search, list, delete, harvest, stats, path`, "error");
+          ctx.ui.notify(
+            `Unknown subcommand: ${subcommand}. Use: store, search, list, delete, harvest, stats, path`,
+            "error",
+          );
       }
     },
   });
@@ -72,7 +82,9 @@ async function refreshListWidget(ctx: ExtensionCommandContext): Promise<void> {
     lines.push(`── Memories (${entries.length}) ──`);
     entries.forEach((e, i) => {
       const tagsStr = e.tags.length > 0 ? ` [${e.tags.join(", ")}]` : "";
-      lines.push(`  ${i + 1}. ${e.summary}${tagsStr} (${e.timestamp.slice(0, 10)})`);
+      lines.push(
+        `  ${i + 1}. ${e.summary}${tagsStr} (${e.timestamp.slice(0, 10)})`,
+      );
     });
     lines.push(`── /memo delete <number> to remove ──`);
     ctx.ui.setWidget("memo-list", lines);
@@ -81,7 +93,10 @@ async function refreshListWidget(ctx: ExtensionCommandContext): Promise<void> {
 
 // ─── Subcommand Handlers ────────────────────────────────────────────
 
-async function handleStore(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+async function handleStore(
+  args: string[],
+  ctx: ExtensionCommandContext,
+): Promise<void> {
   const parsed = parseFlags(args);
   if (parsed.positional.length === 0) {
     ctx.ui.notify("Usage: /memo store <text> [--tags t1,t2]", "error");
@@ -89,7 +104,10 @@ async function handleStore(args: string[], ctx: ExtensionCommandContext): Promis
   }
 
   const tags = parsed.flags.tags
-    ? parsed.flags.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+    ? parsed.flags.tags
+        .split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean)
     : [];
 
   const content = parsed.positional.join(" ");
@@ -98,33 +116,54 @@ async function handleStore(args: string[], ctx: ExtensionCommandContext): Promis
 
   // Refresh the list widget to include the new memory
   await refreshListWidget(ctx);
-  ctx.ui.notify(`✅ Memory stored (id: ${id}). Total: ${count} memories.`, "success");
+  ctx.ui.notify(
+    `✅ Memory stored (id: ${id}). Total: ${count} memories.`,
+    "success",
+  );
 }
 
-async function handleSearch(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+async function handleSearch(
+  args: string[],
+  ctx: ExtensionCommandContext,
+): Promise<void> {
   const parsed = parseFlags(args);
   if (parsed.positional.length === 0) {
-    ctx.ui.notify("Usage: /memo search <query> [--tags t1] [--limit N]", "error");
+    ctx.ui.notify(
+      "Usage: /memo search <query> [--tags t1] [--limit N]",
+      "error",
+    );
     return;
   }
 
   const tags = parsed.flags.tags
-    ? parsed.flags.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+    ? parsed.flags.tags
+        .split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean)
     : undefined;
   const limit = parsed.flags.limit ? parseInt(parsed.flags.limit, 10) : 10;
 
-  const results = await store.search(parsed.positional.join(" "), { tags, limit });
+  const results = await store.search(parsed.positional.join(" "), {
+    tags,
+    limit,
+  });
 
   if (results.length === 0) {
     ctx.ui.setWidget("memo-search", undefined);
-    ctx.ui.notify("No matching memories found. Use /memo harvest to build project knowledge.", "info");
+    ctx.ui.notify(
+      "No matching memories found. Use /memo harvest to build project knowledge.",
+      "info",
+    );
     return;
   }
 
   const lines: string[] = [];
-  lines.push(`── Search: "${parsed.positional.join(" ")}" (${results.length}) ──`);
+  lines.push(
+    `── Search: "${parsed.positional.join(" ")}" (${results.length}) ──`,
+  );
   results.forEach((r, i) => {
-    const tagsStr = r.entry.tags.length > 0 ? ` [${r.entry.tags.join(", ")}]` : "";
+    const tagsStr =
+      r.entry.tags.length > 0 ? ` [${r.entry.tags.join(", ")}]` : "";
     lines.push(`  ${i + 1}. ${r.entry.summary} (score: ${r.score})${tagsStr}`);
     lines.push(`     ${r.preview}`);
   });
@@ -132,32 +171,44 @@ async function handleSearch(args: string[], ctx: ExtensionCommandContext): Promi
   ctx.ui.setWidget("memo-search", lines);
 }
 
-async function handleList(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+async function handleList(
+  args: string[],
+  ctx: ExtensionCommandContext,
+): Promise<void> {
   const parsed = parseFlags(args);
   const tags = parsed.flags.tags
-    ? parsed.flags.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+    ? parsed.flags.tags
+        .split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean)
     : undefined;
   const limit = parsed.flags.limit ? parseInt(parsed.flags.limit, 10) : 20;
 
   const entries = await store.list({ tags, limit });
 
   if (entries.length === 0) {
-    ctx.ui.setWidget("memo-list", undefined);
-    ctx.ui.notify("No memories stored yet. Use /memo harvest to scan the project.", "info");
+    ctx.ui.notify(
+      "No memories stored yet. Use /memo harvest to scan the project.",
+      "info",
+    );
     return;
   }
 
-  const lines: string[] = [];
-  lines.push(`── Memories (${entries.length}) ──`);
+  const msg = [`── Memories (${entries.length}) ──`];
   entries.forEach((e, i) => {
     const tagsStr = e.tags.length > 0 ? ` [${e.tags.join(", ")}]` : "";
-    lines.push(`  ${i + 1}. ${e.summary}${tagsStr} (${e.timestamp.slice(0, 10)})`);
+    msg.push(
+      `  ${i + 1}. ${e.summary}${tagsStr} (${e.timestamp.slice(0, 10)})`,
+    );
   });
-  lines.push(`── /memo delete <number> to remove ──`);
-  ctx.ui.setWidget("memo-list", lines);
+  msg.push(`── /memo delete <number> to remove ──`);
+  ctx.ui.notify(msg.join("\n"), "info");
 }
 
-async function handleDelete(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+async function handleDelete(
+  args: string[],
+  ctx: ExtensionCommandContext,
+): Promise<void> {
   // Check for --all / -a flag
   const parsed = parseFlags(args);
   if (parsed.flags["all"] === "true" || parsed.flags["a"] === "true") {
@@ -169,7 +220,10 @@ async function handleDelete(args: string[], ctx: ExtensionCommandContext): Promi
     // Confirm with user
     let confirmed = false;
     if (ctx.hasUI) {
-      confirmed = await ctx.ui.confirm("Delete all?", `Delete all ${count} memories? This cannot be undone.`);
+      confirmed = await ctx.ui.confirm(
+        "Delete all?",
+        `Delete all ${count} memories? This cannot be undone.`,
+      );
     } else {
       // Print mode — no interactive confirm
       confirmed = true;
@@ -192,7 +246,10 @@ async function handleDelete(args: string[], ctx: ExtensionCommandContext): Promi
   }
 
   if (parsed.positional.length === 0) {
-    ctx.ui.notify("Usage: /memo delete <id|number>  or  /memo delete --all (-a)", "error");
+    ctx.ui.notify(
+      "Usage: /memo delete <id|number>  or  /memo delete --all (-a)",
+      "error",
+    );
     return;
   }
 
@@ -205,9 +262,15 @@ async function handleDelete(args: string[], ctx: ExtensionCommandContext): Promi
       const count = await store.count();
       // Refresh widget with updated list
       await refreshListWidget(ctx);
-      ctx.ui.notify(`Deleted memory #${index}. ${count} memories remaining.`, "success");
+      ctx.ui.notify(
+        `Deleted memory #${index}. ${count} memories remaining.`,
+        "success",
+      );
     } else {
-      ctx.ui.notify(`Invalid index: ${index}. Use /memo list to see valid indices.`, "error");
+      ctx.ui.notify(
+        `Invalid index: ${index}. Use /memo list to see valid indices.`,
+        "error",
+      );
     }
   } else {
     const ok = await store.delete(input);
@@ -215,9 +278,15 @@ async function handleDelete(args: string[], ctx: ExtensionCommandContext): Promi
       const count = await store.count();
       // Refresh widget with updated list
       await refreshListWidget(ctx);
-      ctx.ui.notify(`Deleted memory ${input}. ${count} memories remaining.`, "success");
+      ctx.ui.notify(
+        `Deleted memory ${input}. ${count} memories remaining.`,
+        "success",
+      );
     } else {
-      ctx.ui.notify(`Memory ${input} not found. Use /memo list to see IDs.`, "error");
+      ctx.ui.notify(
+        `Memory ${input} not found. Use /memo list to see IDs.`,
+        "error",
+      );
     }
   }
 }
@@ -225,15 +294,18 @@ async function handleDelete(args: string[], ctx: ExtensionCommandContext): Promi
 async function handleHarvest(ctx: ExtensionCommandContext): Promise<void> {
   ctx.ui.notify("🔍 Harvesting project knowledge...", "info");
   const count = await harvestProject(store.projectDir);
-  ctx.ui.notify(`✅ Harvested ${count} new memories about the project.`, "success");
-
-  // Refresh list widget with harvested data
-  await refreshListWidget(ctx);
+  ctx.ui.notify(
+    `✅ Harvested ${count} new memories about the project.`,
+    "success",
+  );
 }
 
 async function handleStats(ctx: ExtensionCommandContext): Promise<void> {
   const count = await store.count();
-  ctx.ui.notify(`🧠 pi-memoir: ${count} memories at ${store.directory}`, "info");
+  ctx.ui.notify(
+    `🧠 pi-memoir: ${count} memories at ${store.directory}`,
+    "info",
+  );
 }
 
 async function handlePath(ctx: ExtensionCommandContext): Promise<void> {

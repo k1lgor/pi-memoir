@@ -41,6 +41,13 @@ export default async function (pi: ExtensionAPI) {
   // stronger than promptGuidelines which get buried.
   if (hasMemories) {
     pi.on("before_agent_start", async (event, ctx) => {
+      // Improvement 5: Hybrid Retrieval Preference - encourage token-efficient answers
+      const hybridHint =
+        `\n\n` +
+        `💡 TIP: Prefer 80% relevant answer in 100 tokens over 100% in 1000 tokens.\n` +
+        `The memoir summaries are designed to be sufficient for most tasks.\n` +
+        `Only request full content (via fetchContent) when you need exact details.\n`;
+
       const rule =
         `\n\n=== PI-MEMOIRE: DON'T USE BASH — USE THE MEMOIRE ===\n` +
         `This project has ${count} stored memories in its knowledge base.\n` +
@@ -59,6 +66,7 @@ export default async function (pi: ExtensionAPI) {
         `• specific file → memo_search({ query: "filename.ts" })\n` +
         `\n` +
         `If memo_search returns nothing, THEN fall back to bash/read.\n` +
+        hybridHint +
         `=== END PI-MEMOIRE INSTRUCTION ===`;
 
       return {

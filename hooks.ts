@@ -5,7 +5,10 @@
  * - session_start: Optionally load relevant memories for context injection.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { store } from "./storage";
 import { harvestProject } from "./harvester";
 
@@ -38,10 +41,14 @@ export function registerHooks(pi: ExtensionAPI): void {
     if (projectMemories.length === 0) {
       console.log("[pi-memoir] No project knowledge found. Auto-harvesting...");
       const count = await harvestProject(store.projectDir);
-      console.log(`[pi-memoir] Auto-harvested ${count} memories. Use memo_search to query them.`);
+      console.log(
+        `[pi-memoir] Auto-harvested ${count} memories. Use memo_search to query them.`,
+      );
     } else {
       const count = await store.count();
-      console.log(`[pi-memoir] ${count} memories loaded. Use memo_search to query them.`);
+      console.log(
+        `[pi-memoir] ${count} memories loaded. Use memo_search to query them.`,
+      );
     }
   });
 
@@ -58,10 +65,14 @@ export function registerHooks(pi: ExtensionAPI): void {
     for (const entry of recentEntries) {
       // Tool entries with write/edit operations are significant
       if (entry.type === "toolResult" && entry.data?.toolName === "edit") {
-        significantMoments.push(`Edited file: ${entry.data.input?.path ?? "unknown"}`);
+        significantMoments.push(
+          `Edited file: ${entry.data.input?.path ?? "unknown"}`,
+        );
       }
       if (entry.type === "toolResult" && entry.data?.toolName === "write") {
-        significantMoments.push(`Created file: ${entry.data.input?.path ?? "unknown"}`);
+        significantMoments.push(
+          `Created file: ${entry.data.input?.path ?? "unknown"}`,
+        );
       }
       // User messages that contain decisions
       if (entry.type === "user" && entry.data?.content) {
@@ -106,11 +117,15 @@ export function registerHooks(pi: ExtensionAPI): void {
 function extractText(content: unknown): string | null {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
-    return content
-      .map((part: Record<string, unknown>) => (part.type === "text" ? String(part.text ?? "") : ""))
-      .filter(Boolean)
-      .join(" ")
-      .trim() || null;
+    return (
+      content
+        .map((part: Record<string, unknown>) =>
+          part.type === "text" ? String(part.text ?? "") : "",
+        )
+        .filter(Boolean)
+        .join(" ")
+        .trim() || null
+    );
   }
   return null;
 }

@@ -16,11 +16,15 @@ import * as path from "node:path";
 export interface MemoryEntry {
   id: string;
   timestamp: string; // ISO 8601
+  lastModified?: string; // ISO 8601 - for staleness tracking (Imp 2)
   content: string;
   summary: string;
   tags: string[];
   scope: string;
   source: "manual" | "auto" | "tool";
+  // Improvement 3: Lazy Harvesting
+  isMetadataOnly?: boolean; // true if content not yet harvested
+  originalFilePath?: string; // path for on-demand content retrieval
 }
 
 export interface SearchOptions {
@@ -28,6 +32,8 @@ export interface SearchOptions {
   scope?: string;
   limit?: number;
   includeContent?: boolean;
+  // Improvement 2: Staleness-Based Filtering
+  expireDays?: number;
 }
 
 export interface SearchResult {
@@ -93,23 +99,43 @@ export class MemoryStore {
   }
 
   /** Append a new memory entry. Returns the entry ID. */
+  /**
+   * Improvement 2: Check if entry is older than expireDays
+   */
+  private isExpired(entry: MemoryEntry, expireDays: number): boolean {
+    const lastMod = entry.lastModified || entry.timestamp;
+    const lastModDate = new Date(lastMod);
+    const now = new Date();
+    const diffMs = now.getTime() - lastModDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays > expireDays;
+  }
+
   async store(opts: {
     content: string;
     summary?: string;
     tags?: string[];
     scope?: string;
     source?: "manual" | "auto" | "tool";
+    // Improvement 3: Lazy Harvesting
+    isMetadataOnly?: boolean;
+    originalFilePath?: string;
   }): Promise<string> {
     await this.load();
 
+    const now = new Date().toISOString();
     const entry: MemoryEntry = {
       id: generateId(),
-      timestamp: new Date().toISOString(),
+      timestamp: now,
+      lastModified: now, // Track last modification time
       content: opts.content,
       summary: opts.summary ?? opts.content.slice(0, 80),
       tags: opts.tags ?? [],
       scope: opts.scope ?? "global",
       source: opts.source ?? "manual",
+      // Improvement 3: Lazy Harvesting
+      isMetadataOnly: opts.isMetadataOnly ?? false,
+      originalFilePath: opts.originalFilePath,
     };
 
     this.entries.push(entry);
@@ -121,11 +147,59 @@ export class MemoryStore {
     return entry.id;
   }
 
+  /**
+   * Improvement 3: Lazy Harvesting - fetch full content on demand
+   * If content is metadata-only, try to read from originalFilePath
+   */
+  async fetchContent(id: string): Promise<string | null> {
+    await this.load();
+    const entry = this.entries.find((e) => e.id === id);
+    if (!entry) return null;
+
+    // If content already available, return it
+    if (entry.content && !entry.isMetadataOnly) {
+      return entry.content;
+    }
+
+    // Try to read from original file path
+    if (entry.originalFilePath && entry.isMetadataOnly) {
+      try {
+        const content = fs.readFileSync(entry.originalFilePath, "utf-8");
+        // Update entry with full content
+        entry.content = content;
+        entry.isMetadataOnly = false;
+        entry.lastModified = new Date().toISOString();
+        await this.persist();
+        return content;
+      } catch {
+        return null;
+      }
+    }
+
+    return entry.content;
+  }
+
+  /**
+   * Improvement 2: Auto-expire old memories
+   * @returns number of entries pruned
+   */
+  async pruneExpired(expireDays: number): Promise<number> {
+    await this.load();
+    const before = this.entries.length;
+    this.entries = this.entries.filter((e) => !this.isExpired(e, expireDays));
+    const pruned = before - this.entries.length;
+    if (pruned > 0) {
+      await this.persist();
+    }
+    return pruned;
+  }
+
   /** Search memories by keyword matching against content, summary, and tags. */
   async search(query: string, opts?: SearchOptions): Promise<SearchResult[]> {
     await this.load();
 
-    const limit = opts?.limit ?? 10;
+    // Improvement 1: Query-Result Compression - default to 5 results
+    const limit = opts?.limit ?? 5;
     const lowerQuery = query.toLowerCase();
     const queryTerms = lowerQuery.split(/\s+/).filter((t) => t.length > 0);
 
@@ -134,6 +208,10 @@ export class MemoryStore {
     // Score each entry by term frequency
     const scored = this.entries
       .filter((e) => {
+        // Improvement 2: Staleness-Based Filtering
+        if (opts?.expireDays && this.isExpired(e, opts.expireDays)) {
+          return false;
+        }
         if (opts?.tags && opts.tags.length > 0) {
           const hasAllTags = opts.tags.every((t) => e.tags.includes(t));
           if (!hasAllTags) return false;
@@ -166,20 +244,27 @@ export class MemoryStore {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
+    // Improvement 1: Query-Result Compression - always use summary for smaller output
     return scored.map((r) => ({
       entry: r.entry,
       score: r.score,
-      preview: opts?.includeContent !== false ? r.entry.content.slice(0, 200) : r.entry.summary,
+      preview: r.entry.summary,
     }));
   }
 
   /** List recent entries, optionally filtered by tags/scope. Returns newest first. */
-  async list(opts?: { tags?: string[]; scope?: string; limit?: number }): Promise<MemoryEntry[]> {
+  async list(opts?: {
+    tags?: string[];
+    scope?: string;
+    limit?: number;
+  }): Promise<MemoryEntry[]> {
     await this.load();
 
     let filtered = this.entries;
     if (opts?.tags && opts.tags.length > 0) {
-      filtered = filtered.filter((e) => opts.tags!.every((t) => e.tags.includes(t)));
+      filtered = filtered.filter((e) =>
+        opts.tags!.every((t) => e.tags.includes(t)),
+      );
     }
     if (opts?.scope) {
       filtered = filtered.filter((e) => e.scope === opts.scope);

@@ -22,3 +22,6 @@ Thumbs.db
 dist/
 build/
 *.tsbuildinfo
+
+.pantheon/*
+*blog-post.md
