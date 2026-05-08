@@ -121,7 +121,7 @@ LLM: calls memo_search({ query: "architecture", tags: "project:structure" })
 | ----------------------------------- | ------------------------------------------- |
 | `/memo harvest`                     | Scan project and build knowledge base       |
 | `/memo search <query> [--tags t1]`  | Search stored memories                      |
-| `/memo list [--tags t1]`            | List recent memories (shows notification)      |
+| `/memo list [--tags t1]`            | List recent memories (shows notification)   |
 | `/memo store <text> [--tags t1,t2]` | Store a memory manually                     |
 | `/memo delete <number>`             | Delete by number from list                  |
 | `/memo delete --all` or `-a`        | **Delete ALL memories** (with confirmation) |
